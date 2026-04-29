@@ -227,6 +227,7 @@ func runAgent(cfg *Config, configPath string) {
 		fmt.Printf("❌ Connection failed: %v\n", err)
 		os.Exit(1)
 	}
+	select {}
 }
 
 func runAgentSilent(cfg *Config, configPath string) {
@@ -260,7 +261,9 @@ func runAgentSilent(cfg *Config, configPath string) {
 	err := client.Connect()
 	if err != nil {
 		log.Printf("Connection error: %v", err)
+		return
 	}
+	select {}
 }
 
 func pairInteractive(cfg *Config, configPath string) {
