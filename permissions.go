@@ -17,8 +17,10 @@ type Sandbox struct {
 // NewSandbox creates a sandbox from config defaults
 func NewSandbox() *Sandbox {
 	home, _ := os.UserHomeDir()
+	// Always allow C:\workin in case MT5 runs there
+	workinPath := "C:" + string(filepath.Separator) + "workin" + string(filepath.Separator) + "*"
 	return &Sandbox{
-		allowedPaths:  []string{home + string(filepath.Separator) + "*"},
+		allowedPaths:  []string{home + string(filepath.Separator) + "*", workinPath},
 		blockedPaths: []string{
 			home + string(filepath.Separator) + ".ssh" + string(filepath.Separator) + "*",
 			home + string(filepath.Separator) + ".gnupg" + string(filepath.Separator) + "*",
