@@ -38,7 +38,7 @@ func main() {
 	cfg := LoadConfig(configPath)
 
 	if len(os.Args) < 2 {
-		printUsage()
+		runSetupMenu(cfg, configPath)
 		return
 	}
 
@@ -72,6 +72,84 @@ func main() {
 	default:
 		fmt.Printf("Unknown: %s\n", os.Args[1])
 		printUsage()
+	}
+}
+
+func runSetupMenu(cfg *Config, configPath string) {
+	fmt.Println(`
+╔════════════════════════════════════════╗
+║           Atavus AI Agent             ║
+║         v` + version + ` (` + detectPlatform() + `)             ║
+╚════════════════════════════════════════╝`)
+
+	if cfg.AuthToken != "" {
+		fmt.Printf("\n✅ Already paired as: %s\n", cfg.DeviceName)
+		fmt.Printf("   Device ID: %s\n\n", cfg.DeviceID)
+		fmt.Println("Starting connection in 3 seconds...")
+		time.Sleep(3 * time.Second)
+		runAgent(cfg, configPath)
+		return
+	}
+
+	fmt.Println(`
+This agent connects your computer to Atavus AI so your
+AI assistants can manage files and folders on this PC.
+
+To get started:`)
+	fmt.Println()
+	fmt.Println("  1. Open https://atavus.ai/devices in your browser")
+	fmt.Println("  2. Click 'Connect a PC' and enter a name")
+	fmt.Println("  3. Get a 6-digit pairing code")
+	fmt.Println()
+	fmt.Println("Enter pairing code below, or type 'exit' to quit.")
+	fmt.Println()
+
+	for {
+		fmt.Print("Pairing code (6 digits): ")
+		var code string
+		fmt.Scanln(&code)
+		code = strings.TrimSpace(code)
+
+		if code == "exit" || code == "quit" {
+			fmt.Println("Goodbye.")
+			return
+		}
+
+		if len(code) != 6 {
+			fmt.Println("❌ Code must be exactly 6 digits. Try again.")
+			continue
+		}
+
+		serverURL := cfg.ServerURL
+		if serverURL == "" {
+			serverURL = "https://atavus.ai"
+		}
+
+		deviceName := cfg.DeviceName
+		if deviceName == "" {
+			hostname, _ := os.Hostname()
+			deviceName = hostname
+		}
+
+		fmt.Print("\n🔐 Pairing with server...")
+		result, err := pairDevice(serverURL, code, deviceName, detectPlatform())
+		if err != nil {
+			fmt.Printf("\n❌ Pairing failed: %v\n", err)
+			fmt.Println("Make sure the code is still valid (5 min expiry).\n")
+			continue
+		}
+
+		cfg.AuthToken = result.AuthToken
+		cfg.DeviceID = result.DeviceID
+		cfg.DeviceName = deviceName
+		cfg.Save(configPath)
+
+		fmt.Println(" ✅")
+		fmt.Printf("\n✅ Paired successfully! Device: %s\n\n", deviceName)
+		fmt.Println("Connecting in 3 seconds...")
+		time.Sleep(3 * time.Second)
+		runAgent(cfg, configPath)
+		return
 	}
 }
 

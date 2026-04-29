@@ -22,14 +22,14 @@ echo "  ✅ ${OUTDIR}/agent/atavus-agent-linux"
 # ── Windows amd64 (most common) ──
 echo "→ Windows amd64..."
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
-  -ldflags="-s -w -X main.platform=windows -X main.version=${VERSION} -H windowsgui" \
+  -ldflags="-s -w -X main.platform=windows -X main.version=${VERSION}" \
   -o "${OUTDIR}/agent/atavus-agent-windows-amd64.exe" .
 echo "  ✅ ${OUTDIR}/agent/atavus-agent-windows-amd64.exe"
 
 # ── Windows 386 (older systems) ──
 echo "→ Windows 386..."
 CGO_ENABLED=0 GOOS=windows GOARCH=386 go build \
-  -ldflags="-s -w -X main.platform=windows -X main.version=${VERSION} -H windowsgui" \
+  -ldflags="-s -w -X main.platform=windows -X main.version=${VERSION}" \
   -o "${OUTDIR}/agent/atavus-agent-windows-386.exe" .
 echo "  ✅ ${OUTDIR}/agent/atavus-agent-windows-386.exe"
 
