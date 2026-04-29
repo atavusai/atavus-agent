@@ -101,22 +101,38 @@ To get started:`)
 	fmt.Println("  2. Click 'Connect a PC' and enter a name")
 	fmt.Println("  3. Get a 6-digit pairing code")
 	fmt.Println()
-	fmt.Println("Enter pairing code below, or type 'exit' to quit.")
+	fmt.Println("Enter pairing code below, or type 'help' for options.")
 	fmt.Println()
 
 	for {
-		fmt.Print("Pairing code (6 digits): ")
+		fmt.Print("▶ Code (6 digits): ")
 		var code string
 		fmt.Scanln(&code)
 		code = strings.TrimSpace(code)
 
-		if code == "exit" || code == "quit" {
+		switch code {
+		case "exit", "quit":
 			fmt.Println("Goodbye.")
 			return
+		case "help", "?":
+			fmt.Println()
+			fmt.Println("  Type a 6-digit code → pair this computer")
+			fmt.Println("  Type 'new'         → show how to generate a code")
+			fmt.Println("  Type 'exit'        → quit")
+			fmt.Println()
+			continue
+		case "new":
+			fmt.Println()
+			fmt.Println("  To generate a new pairing code:")
+			fmt.Println("  1. Open https://atavus.ai/devices in your browser")
+			fmt.Println("  2. Click 'Connect a PC' → enter a name → click 'Generate Pairing Code'")
+			fmt.Println("  3. Type the 6-digit code below within 5 minutes")
+			fmt.Println()
+			continue
 		}
 
 		if len(code) != 6 {
-			fmt.Println("❌ Code must be exactly 6 digits. Try again.")
+			fmt.Println("❌ Must be exactly 6 digits. Type 'help' for options.")
 			continue
 		}
 
@@ -135,7 +151,10 @@ To get started:`)
 		result, err := pairDevice(serverURL, code, deviceName, detectPlatform())
 		if err != nil {
 			fmt.Printf("\n❌ Pairing failed: %v\n", err)
-			fmt.Println("Make sure the code is still valid (5 min expiry).\n")
+			fmt.Println()
+			fmt.Println("  🔄 Go to https://atavus.ai/devices and click 'Connect a PC'")
+			fmt.Println("     to get a fresh 6-digit code. It expires in 5 minutes.")
+			fmt.Println()
 			continue
 		}
 
