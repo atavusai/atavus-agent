@@ -28,7 +28,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	home, _ := os.UserHomeDir()
 	return &Config{
-		ServerURL:       "https://atavus.ai",
+		ServerURL:       "",
 		AllowedPaths:    []string{home + string(filepath.Separator) + "*"},
 		BlockedPaths:    []string{},
 		MaxFileSizeMB:   50,

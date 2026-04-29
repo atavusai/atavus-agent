@@ -191,10 +191,12 @@ func runAgent(cfg *Config, configPath string) {
 
 	wsURL := cfg.ServerURL
 	if wsURL == "" {
-		wsURL = "wss://atavus.ai/api/v1/device-manage/ws"
+		wsURL = "https://atavus.ai"
 	}
 	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
 	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
+	// Always append the WebSocket endpoint path
+	wsURL = strings.TrimRight(wsURL, "/") + "/api/v1/device-manage/ws"
 
 	sandbox := NewSandbox()
 	client := NewWSClient(wsURL, cfg.AuthToken, sandbox)
@@ -234,6 +236,9 @@ func runAgentSilent(cfg *Config, configPath string) {
 		wsURL = "wss://atavus.ai/api/v1/device-manage/ws"
 	}
 	sandbox := NewSandbox()
+	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
+	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
+	wsURL = strings.TrimRight(wsURL, "/") + "/api/v1/device-manage/ws"
 	client := NewWSClient(wsURL, cfg.AuthToken, sandbox)
 	client.deviceID = cfg.DeviceID
 	client.deviceName = cfg.DeviceName
