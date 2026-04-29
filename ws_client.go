@@ -68,16 +68,17 @@ func (c *WSClient) Connect() error {
 	c.conn = conn
 	log.Println("Connected to Atavus")
 
-	// Send auth message
-	authMsg := WsMessage{
-		Type: "auth",
-		Data: mustMarshal(map[string]string{
-			"token":       c.authToken,
-			"device_id":   c.deviceID,
-			"device_name": c.deviceName,
-		}),
+	// Send auth message — flat JSON, backend reads token at top level
+	authPayload, _ := json.Marshal(map[string]string{
+		"type":        "auth",
+		"token":       c.authToken,
+		"device_id":   c.deviceID,
+		"device_name": c.deviceName,
+	})
+	err = c.conn.WriteMessage(websocket.TextMessage, authPayload)
+	if err != nil {
+		return fmt.Errorf("auth send error: %w", err)
 	}
-	c.send(authMsg)
 	log.Println("Auth message sent")
 
 	// Start heartbeat
