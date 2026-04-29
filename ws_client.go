@@ -58,9 +58,12 @@ func (c *WSClient) Connect() error {
 	}
 
 	// Token is sent in the auth message, not as query param
-	conn, _, err := dialer.Dial(c.serverURL, nil)
+	conn, httpResp, err := dialer.Dial(c.serverURL, nil)
 	if err != nil {
-		return fmt.Errorf("dial error: %w", err)
+		if httpResp != nil {
+			return fmt.Errorf("dial error: server returned HTTP %d - %w", httpResp.StatusCode, err)
+		}
+		return fmt.Errorf("dial error (no response): %w", err)
 	}
 	c.conn = conn
 	log.Println("Connected to Atavus")
