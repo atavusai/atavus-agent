@@ -200,6 +200,12 @@ func runAgent(cfg *Config, configPath string) {
 	client := NewWSClient(wsURL, cfg.AuthToken, sandbox)
 	client.deviceID = cfg.DeviceID
 	client.deviceName = cfg.DeviceName
+	client.configPath = configPath
+	client.onAuthFail = func() {
+		fmt.Println("Press Enter to restart pairing...")
+		fmt.Scanln()
+		runSetupMenu(cfg, configPath)
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -227,13 +233,16 @@ func runAgentSilent(cfg *Config, configPath string) {
 	if wsURL == "" {
 		wsURL = "wss://atavus.ai/api/v1/device-manage/ws"
 	}
-	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
-	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
-
 	sandbox := NewSandbox()
 	client := NewWSClient(wsURL, cfg.AuthToken, sandbox)
 	client.deviceID = cfg.DeviceID
 	client.deviceName = cfg.DeviceName
+	client.configPath = configPath
+	client.onAuthFail = func() {
+		fmt.Println("Press Enter to restart pairing...")
+		fmt.Scanln()
+		runSetupMenu(cfg, configPath)
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -18,6 +19,8 @@ type WSClient struct {
 	sandbox    *Sandbox
 	conn       *websocket.Conn
 	done       chan struct{}
+	configPath string // path to config file (for clearing credentials on auth fail)
+	onAuthFail func()  // callback when auth fails (stale token)
 }
 
 // NewWSClient creates a new WebSocket client
@@ -54,7 +57,8 @@ func (c *WSClient) Connect() error {
 		HandshakeTimeout: 10 * time.Second,
 	}
 
-	conn, _, err := dialer.Dial(c.serverURL+"?token="+c.authToken, nil)
+	// Token is sent in the auth message, not as query param
+	conn, _, err := dialer.Dial(c.serverURL, nil)
 	if err != nil {
 		return fmt.Errorf("dial error: %w", err)
 	}
@@ -165,6 +169,8 @@ func (c *WSClient) handleMessage(msg WsMessage) {
 		log.Println("✅ Authentication verified by server")
 	case "auth_error":
 		log.Printf("❌ Authentication failed: %s", msg.Error)
+		// Device was deleted from dashboard — clear credentials and stop
+		c.handleAuthFailure()
 	case "disconnect":
 		log.Println("Server requested disconnect")
 		c.Stop()
@@ -175,6 +181,29 @@ func (c *WSClient) handleMessage(msg WsMessage) {
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
+}
+
+// handleAuthFailure clears stored credentials when auth fails (device deleted)
+func (c *WSClient) handleAuthFailure() {
+	c.Stop()
+	// Clear saved token so reconnect won't reuse stale credentials
+	if c.configPath != "" {
+		cfg := DefaultConfig()
+		cfg.Save(c.configPath)
+		log.Println("Cleared saved credentials (device was removed from dashboard)")
+	}
+	fmt.Println()
+	fmt.Println("╔════════════════════════════════════════╗")
+	fmt.Println("║     Device removed from dashboard      ║")
+	fmt.Println("╚════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("This device was unlinked from your Atavus account.")
+	fmt.Println("Go to https://atavus.ai/devices to generate a new pairing code.")
+	fmt.Println()
+	if c.onAuthFail != nil {
+		c.onAuthFail()
+	}
+	os.Exit(1)
 }
 
 // handleExecute processes an execute command from the server
