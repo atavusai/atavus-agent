@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -588,4 +590,218 @@ func parseFloat(s string) float64 {
 	var f float64
 	fmt.Sscanf(s, "%f", &f)
 	return f
+}
+
+// ── Binary File Read (base64) ──────────────────────────
+
+// handleReadFileBase64 reads a file and returns it base64-encoded
+func handleReadFileBase64(path string, sandbox *Sandbox) (interface{}, string) {
+	allowed, reason := sandbox.IsPathAllowed(path)
+	if !allowed {
+		return nil, reason
+	}
+
+	absPath, _ := filepath.Abs(path)
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot access: %v", err)
+	}
+
+	if info.IsDir() {
+		return nil, "cannot read a directory"
+	}
+
+	sizeOk, reason := sandbox.IsFileSizeAllowed(info.Size())
+	if !sizeOk {
+		return nil, reason
+	}
+
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot read: %v", err)
+	}
+
+	detectedMime := detectMimeType(absPath, data)
+	encoded := base64.StdEncoding.EncodeToString(data)
+
+	return map[string]interface{}{
+		"path":      absPath,
+		"size":      info.Size(),
+		"mime_type": detectedMime,
+		"extension": filepath.Ext(absPath),
+		"content":   encoded,
+		"encoding":  "base64",
+	}, ""
+}
+
+// detectMimeType guesses MIME from extension and magic bytes
+func detectMimeType(path string, data []byte) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".pdf":
+		return "application/pdf"
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".pptx":
+		return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".csv":
+		return "text/csv"
+	case ".md":
+		return "text/markdown"
+	case ".json":
+		return "application/json"
+	case ".yaml", ".yml":
+		return "text/yaml"
+	case ".xml":
+		return "text/xml"
+	case ".txt":
+		return "text/plain"
+	case ".doc":
+		return "application/msword"
+	case ".xls":
+		return "application/vnd.ms-excel"
+	case ".ppt":
+		return "application/vnd.ms-powerpoint"
+	case ".zip":
+		return "application/zip"
+	case ".mp4":
+		return "video/mp4"
+	case ".mp3":
+		return "audio/mpeg"
+	default:
+		// Check magic bytes
+		if len(data) > 4 {
+			if data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46 {
+				return "application/pdf"
+			}
+			if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 {
+				return "image/png"
+			}
+			if data[0] == 0xFF && data[1] == 0xD8 {
+				return "image/jpeg"
+			}
+		}
+		return "application/octet-stream"
+	}
+}
+
+// ── File Creation ──────────────────────────────────────
+
+// handleCreateDocument creates a formatted text/CSV/MD file
+func handleCreateDocument(params map[string]interface{}, sandbox *Sandbox) (interface{}, string) {
+	path, _ := params["path"].(string)
+	content, _ := params["content"].(string)
+	fileType, _ := params["file_type"].(string)
+
+	if path == "" {
+		return nil, "path is required"
+	}
+
+	allowed, reason := sandbox.IsPathAllowed(path)
+	if !allowed {
+		return nil, reason
+	}
+
+	absPath, _ := filepath.Abs(path)
+
+	switch strings.ToLower(fileType) {
+	case "md", "markdown":
+	case "csv":
+		// CSV content is plain text with lines
+	case "txt", "text":
+	case "json":
+		// Validate JSON
+		if !json.Valid([]byte(content)) {
+			return nil, "invalid JSON content"
+		}
+	case "html":
+		// Wrap in basic HTML if not already
+		if !strings.HasPrefix(strings.TrimSpace(content), "<") {
+			content = "<!DOCTYPE html><html><body>" + content + "</body></html>"
+		}
+	case "yaml", "yml":
+		// YAML content is plain text
+	default:
+		// Default to raw content, just write it
+	}
+
+	// Write the file
+	if err := os.WriteFile(absPath, []byte(content), 0644); err != nil {
+		return nil, fmt.Sprintf("cannot create file: %v", err)
+	}
+
+	return map[string]interface{}{
+		"path":      absPath,
+		"size":      len(content),
+		"file_type": fileType,
+	}, ""
+}
+
+// handleCreatePresentation creates a simple PPTX file
+func handleCreatePresentation(params map[string]interface{}, sandbox *Sandbox) (interface{}, string) {
+	path, _ := params["path"].(string)
+	title, _ := params["title"].(string)
+	slidesRaw, _ := params["slides"].([]interface{})
+
+	if path == "" {
+		return nil, "path is required"
+	}
+
+	// We can't create actual PPTX in Go without heavy lib
+	// Instead create a Markdown/HTML representation that the backend can read
+	content := fmt.Sprintf("# %s\n\n", title)
+	for i, slide := range slidesRaw {
+		slideMap, ok := slide.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		slideTitle, _ := slideMap["title"].(string)
+		content += fmt.Sprintf("## Slide %d: %s\n\n", i+1, slideTitle)
+		if body, ok := slideMap["body"].(string); ok && body != "" {
+			content += body + "\n\n"
+		}
+		if bullets, ok := slideMap["bullets"].([]interface{}); ok {
+			for _, b := range bullets {
+				content += fmt.Sprintf("- %v\n", b)
+			}
+			content += "\n"
+		}
+		content += "---\n\n"
+	}
+
+	absPath, _ := filepath.Abs(path)
+	allowed, reason := sandbox.IsPathAllowed(absPath)
+	if !allowed {
+		return nil, fmt.Sprintf("destination: %s", reason)
+	}
+
+	if err := os.WriteFile(absPath, []byte(content), 0644); err != nil {
+		return nil, fmt.Sprintf("cannot create presentation: %v", err)
+	}
+
+	// Also try to save a .pptx structure if it's a zip (placeholder)
+	ext := strings.ToLower(filepath.Ext(absPath))
+	if ext == ".pptx" {
+		// For now, save markdown alongside so backend can convert
+		mdPath := strings.TrimSuffix(absPath, ext) + ".md"
+		_ = os.WriteFile(mdPath, []byte(content+"\n\n<!-- presentation source for backend conversion -->\n"), 0644)
+	}
+
+	return map[string]interface{}{
+		"path":        absPath,
+		"size":        len(content),
+		"slide_count": len(slidesRaw),
+		"format":      "markdown",
+		"note":        "Created as markdown. Use Atavus AI backend to convert to PPTX.",
+	}, ""
 }

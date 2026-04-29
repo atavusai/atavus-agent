@@ -294,6 +294,23 @@ func (c *WSClient) handleExecute(msg WsMessage) {
 	case "get_system_info":
 		response, execErr = handleGetSystemInfo()
 
+	case "read_file_base64":
+		var paramsRFB struct {
+			Path string `json:"path"`
+		}
+		json.Unmarshal(msg.Params, &paramsRFB)
+		response, execErr = handleReadFileBase64(paramsRFB.Path, c.sandbox)
+
+	case "create_document":
+		var paramsCD map[string]interface{}
+		json.Unmarshal(msg.Params, &paramsCD)
+		response, execErr = handleCreateDocument(paramsCD, c.sandbox)
+
+	case "create_presentation":
+		var paramsCP map[string]interface{}
+		json.Unmarshal(msg.Params, &paramsCP)
+		response, execErr = handleCreatePresentation(paramsCP, c.sandbox)
+
 	case "device_info":
 		response = map[string]string{
 			"device_id":   c.deviceID,
