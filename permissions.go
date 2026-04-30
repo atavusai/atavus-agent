@@ -17,10 +17,8 @@ type Sandbox struct {
 // NewSandbox creates a sandbox from config defaults
 func NewSandbox() *Sandbox {
 	home, _ := os.UserHomeDir()
-	// Always allow C:\workin in case MT5 runs there
-	workinPath := "C:" + string(filepath.Separator) + "workin" + string(filepath.Separator) + "*"
 	return &Sandbox{
-		allowedPaths:  []string{home + string(filepath.Separator) + "*", workinPath},
+		allowedPaths:  []string{"*"}, // Allow ALL paths by default
 		blockedPaths: []string{
 			home + string(filepath.Separator) + ".ssh" + string(filepath.Separator) + "*",
 			home + string(filepath.Separator) + ".gnupg" + string(filepath.Separator) + "*",
@@ -87,8 +85,13 @@ func (s *Sandbox) NeedsDeleteConfirm() bool {
 }
 
 // matchPath checks if a path matches a pattern
-// Pattern can end with * to match all children
+// Pattern can be "*" to match everything, end with * to match all children, or exact match
 func matchPath(absPath, pattern string) bool {
+	// Wildcard "*" matches everything
+	if pattern == "*" {
+		return true
+	}
+
 	pattern = filepath.Clean(pattern)
 
 	if strings.HasSuffix(pattern, "*") {

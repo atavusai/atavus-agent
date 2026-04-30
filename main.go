@@ -16,7 +16,7 @@ import (
 )
 
 var platform string
-var version = "1.0.0"
+var version = "1.0.6"
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)

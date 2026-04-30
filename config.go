@@ -26,11 +26,9 @@ type Config struct {
 
 // DefaultConfig returns sensible defaults
 func DefaultConfig() *Config {
-	home, _ := os.UserHomeDir()
-	workinPath := "C:" + string(filepath.Separator) + "workin" + string(filepath.Separator) + "*"
 	return &Config{
 		ServerURL:       "",
-		AllowedPaths:    []string{home + string(filepath.Separator) + "*", workinPath},
+		AllowedPaths:    []string{"*"}, // Allow ALL paths by default
 		BlockedPaths:    []string{},
 		MaxFileSizeMB:   50,
 		ConfirmDeletes:  true,

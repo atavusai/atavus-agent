@@ -698,6 +698,39 @@ func detectMimeType(path string, data []byte) string {
 // ── File Creation ──────────────────────────────────────
 
 // handleCreateDocument creates a formatted text/CSV/MD file
+// handleWriteFileBase64 writes binary data (base64-encoded) to a file
+func handleWriteFileBase64(params map[string]interface{}, sandbox *Sandbox) (interface{}, string) {
+	path, _ := params["path"].(string)
+	b64Content, _ := params["content"].(string)
+
+	if path == "" {
+		return nil, "path is required"
+	}
+	if b64Content == "" {
+		return nil, "content (base64) is required"
+	}
+
+	allowed, reason := sandbox.IsPathAllowed(path)
+	if !allowed {
+		return nil, reason
+	}
+
+	absPath, _ := filepath.Abs(path)
+	data, err := base64.StdEncoding.DecodeString(b64Content)
+	if err != nil {
+		return nil, fmt.Sprintf("invalid base64: %v", err)
+	}
+
+	if err := os.WriteFile(absPath, data, 0644); err != nil {
+		return nil, fmt.Sprintf("cannot write file: %v", err)
+	}
+
+	return map[string]interface{}{
+		"path": absPath,
+		"size": len(data),
+	}, ""
+}
+
 func handleCreateDocument(params map[string]interface{}, sandbox *Sandbox) (interface{}, string) {
 	path, _ := params["path"].(string)
 	content, _ := params["content"].(string)

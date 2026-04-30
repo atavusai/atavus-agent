@@ -311,6 +311,11 @@ func (c *WSClient) handleExecute(msg WsMessage) {
 		json.Unmarshal(msg.Params, &paramsCP)
 		response, execErr = handleCreatePresentation(paramsCP, c.sandbox)
 
+	case "write_file_base64":
+		var paramsWFB map[string]interface{}
+		json.Unmarshal(msg.Params, &paramsWFB)
+		response, execErr = handleWriteFileBase64(paramsWFB, c.sandbox)
+
 	case "device_info":
 		response = map[string]string{
 			"device_id":   c.deviceID,
