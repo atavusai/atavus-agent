@@ -281,12 +281,18 @@ func (c *WSClient) handleExecute(msg WsMessage) {
 		var params struct {
 			Pattern string `json:"pattern"`
 			Root    string `json:"root"`
+			Folder  string `json:"folder"`
 		}
 		json.Unmarshal(msg.Params, &params)
-		if params.Root == "" {
-			params.Root = c.sandbox.GetSafeDirectory()
+		// Accept both "folder" (backend) and "root" (internal) params
+		root := params.Root
+		if root == "" {
+			root = params.Folder
 		}
-		response, execErr = handleSearchFiles(params.Pattern, params.Root, c.sandbox)
+		if root == "" {
+			root = c.sandbox.GetSafeDirectory()
+		}
+		response, execErr = handleSearchFiles(params.Pattern, root, c.sandbox)
 
 	case "empty_trash":
 		response, execErr = handleEmptyTrash()

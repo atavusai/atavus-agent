@@ -370,7 +370,8 @@ func handleSearchFiles(pattern, root string, sandbox *Sandbox) (interface{}, str
 
 		// Match pattern (case-insensitive)
 		name := d.Name()
-		if strings.Contains(strings.ToLower(name), strings.ToLower(pattern)) {
+		// Try glob match first (supports *.txt, file.*, etc.), fallback to substring match
+		if matched, _ := filepath.Match(strings.ToLower(pattern), strings.ToLower(name)); matched || strings.Contains(strings.ToLower(name), strings.ToLower(pattern)) {
 			info, _ := d.Info()
 			entry := SearchFileEntry{
 				Name:    name,
@@ -716,6 +717,10 @@ func handleWriteFileBase64(params map[string]interface{}, sandbox *Sandbox) (int
 	}
 
 	absPath, _ := filepath.Abs(path)
+	
+	// Ensure parent directory exists
+	os.MkdirAll(filepath.Dir(absPath), 0755)
+	
 	data, err := base64.StdEncoding.DecodeString(b64Content)
 	if err != nil {
 		return nil, fmt.Sprintf("invalid base64: %v", err)
@@ -746,6 +751,9 @@ func handleCreateDocument(params map[string]interface{}, sandbox *Sandbox) (inte
 	}
 
 	absPath, _ := filepath.Abs(path)
+
+	// Ensure parent directory exists
+	os.MkdirAll(filepath.Dir(absPath), 0755)
 
 	switch strings.ToLower(fileType) {
 	case "md", "markdown":
@@ -818,6 +826,9 @@ func handleCreatePresentation(params map[string]interface{}, sandbox *Sandbox) (
 		return nil, fmt.Sprintf("destination: %s", reason)
 	}
 
+	// Ensure parent directory exists
+	os.MkdirAll(filepath.Dir(absPath), 0755)
+
 	if err := os.WriteFile(absPath, []byte(content), 0644); err != nil {
 		return nil, fmt.Sprintf("cannot create presentation: %v", err)
 	}
@@ -827,6 +838,7 @@ func handleCreatePresentation(params map[string]interface{}, sandbox *Sandbox) (
 	if ext == ".pptx" {
 		// For now, save markdown alongside so backend can convert
 		mdPath := strings.TrimSuffix(absPath, ext) + ".md"
+		os.MkdirAll(filepath.Dir(mdPath), 0755)
 		_ = os.WriteFile(mdPath, []byte(content+"\n\n<!-- presentation source for backend conversion -->\n"), 0644)
 	}
 
